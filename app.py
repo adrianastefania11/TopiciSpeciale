@@ -17,7 +17,6 @@ DB_NAME = "pdf_data"
 engine = create_engine(f'postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}')
 
 def extract_tables_from_pdf(pdf_path):
-    """Extract tables from PDF using docling."""
     print(pdf_path)
     try:
 
@@ -44,15 +43,12 @@ def extract_tables_from_pdf(pdf_path):
 # Watchdog event handler to watch for new files
 class PDFHandler(FileSystemEventHandler):
     def on_created(self, event):
-        """Handle a new file in the watched folder."""
         if not event.is_directory and event.src_path.endswith(".pdf"):
             print(f"New PDF detected: {event.src_path}")
             extract_tables_from_pdf(event.src_path)
 
 
 def save_to_database(engine, table_df):
-    """Save extracted table to PostgreSQL."""
-
     # Clean up the DataFrame by renaming columns and converting types
     table_df.columns = ["Nr_crt", "Denumirea_produselor", "UM", "Cant", "Pret_unitar_fara_tva", "Valoare",
                         "Valoare_TVA", "invoice_id"]
@@ -70,31 +66,24 @@ def save_to_database(engine, table_df):
 
 def save_invoice(user_id, invoice_number):
     with engine.connect() as connection:
-        # Începe o tranzacție
         with connection.begin():  # Tranzacția va fi confirmată automat când ieși din blocul 'with'
             try:
-                # Definirea interogării SQL de inserare
                 insert_query = """
                     INSERT INTO invoices (user_id, invoice_number)
                     VALUES (:user_id, :invoice_number)
                     RETURNING id;
                 """
-
-                # Parametrii interogării
                 params = {
                     "user_id": user_id,
                     "invoice_number": invoice_number
                 }
 
-                # Execută interogarea SQL
                 result = connection.execute(text(insert_query), params)
 
-                # Verifică dacă rezultatul există și obține ID-ul facturii
                 invoice_id = result.fetchone()
                 if invoice_id:
                     invoice_id = invoice_id[0]  # Extrage valoarea ID-ului
 
-                    # Returnează ID-ul facturii
                     print(f"Factura a fost salvată cu ID-ul: {invoice_id}")
                     return invoice_id
                 else:
@@ -104,10 +93,10 @@ def save_invoice(user_id, invoice_number):
             except Exception as error:
                 print(f"Error la inserare: {error}")
                 return None
-# Main function
+
 def main():
-    folder_to_watch = "watched_folder"  # Change to your target folder
-    os.makedirs(folder_to_watch, exist_ok=True)  # Ensure the folder exists
+    folder_to_watch = "watched_folder"
+    os.makedirs(folder_to_watch, exist_ok=True)
 
     # Set up and start the observer
     event_handler = PDFHandler()
